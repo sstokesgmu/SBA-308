@@ -100,7 +100,20 @@ function getLearnerData(course, ag, submissions) {
     //     2: 0.833 // late: (140 - 15) / 150
     //   }
   ];
-
+  //! Caculate the total points for the course
+  ag.semester = CreateSemesterBlock(ag);
+  ag.falseAssignments = []; //! For assignments that don't fit in with semester timeframe
+ // console.log(ag.assignments);
+  for(let i = ag.assignments.length -1 ; i > 0; i--) // Because we are going to be modifying the original array with splice we can count backwards to avoid index shifting.
+  {
+    console.log(`Is ${ag.assignments[i].due_at} within the semester ${IsWithinSemester(ag.semester, ag.assignments[i].due_at)!= true}`)
+    // if(IsWithinSemester(ag.semester, ag.assignments[i].due_at) == false){
+    //   let deprecatedObj = ag.assignments.splice(ag.assignments[i], 1);
+    //   ag.falseAssignments.push(deprecatedObj);
+    // }
+  } 
+  //console.log(ag.falseAssignments);
+ // console.log(ag);
 
   //Which learner are we talking about
   let studentIDs = getLearnerIds(getData,submissions);
@@ -222,4 +235,26 @@ function getSubmissionForStudent(submissions, assignmentGroup, id){
   return result;
 }
 
+function CalculateCumulativePoints(assignments){
 
+
+}
+/**
+ * 
+ * @param {array} ag - assignment group 
+ * @returns 
+ */
+function CreateSemesterBlock(ag){
+
+  const semesterStart = new Date(2023, 0, 15 );
+  const semsterEnd = new Date(2023, 4, 27); //!Date cannot be less than the start
+  const semsterTimeFrame = [semesterStart,semsterEnd];
+  return semsterTimeFrame;
+}
+
+function IsWithinSemester(semesterBlock, assignmentDate){
+
+  //!Try catch here with invalid date
+  assignmentDate = new Date(assignmentDate);
+  return semesterBlock[0] <= assignmentDate && assignmentDate <= semesterBlock[1] ? true : false; 
+}
