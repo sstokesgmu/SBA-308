@@ -88,57 +88,79 @@ function getLearnerData(course, ag, submissions) {
   let getData = [];
   //! Make copies of the code to segment it
   const result = [
-      // {
-      //   id: 125,
-      //   avg: 0.985, // (47 + 150) / (50 + 150)
-      //   1: 0.94, // 47 / 50
-      //   2: 1.0 // 150 / 150
-      // },
-      // {
-      //   id: 132,
-      //   avg: 0.82, // (39 + 125) / (50 + 150)
-      //   1: 0.78, // 39 / 50
-      //   2: 0.833 // late: (140 - 15) / 150
-      // }
+    // {
+    //   id: 125,
+    //   avg: 0.985, // (47 + 150) / (50 + 150)
+    //   1: 0.94, // 47 / 50
+    //   2: 1.0 // 150 / 150
+    // },
+    // {
+    //   id: 132,
+    //   avg: 0.82, // (39 + 125) / (50 + 150)
+    //   1: 0.78, // 39 / 50
+    //   2: 0.833 // late: (140 - 15) / 150
+    // }
   ];
   //Adding to the ag object
   ag.semester = CreateSemesterBlock(ag);
   ag.falseAssignments = []; //! For assignments that don't fit in with semester timeframe add to a different array
-  ag.totalPoints = 0; 
+  ag.totalPoints = 0;
 
   // Because we are going to be modifying the original array with splice we can count backwards to avoid index shifting.
-  for (let i = ag.assignments.length; i > 0;  i--) {
+  for (let i = ag.assignments.length; i > 0; i--) {
     IsWithinSemester(ag.semester, ag.assignments[i - 1].due_at);
-    if(!IsWithinSemester(ag.semester, ag.assignments[i - 1].due_at)){
-      let deprecatedObj = ag.assignments.splice(i-1, 1);
+    if (!IsWithinSemester(ag.semester, ag.assignments[i - 1].due_at)) {
+      let deprecatedObj = ag.assignments.splice(i - 1, 1);
       ag.falseAssignments.push(deprecatedObj);
       continue;
     }
-   ag.assignments[i-1].assignmentWeight = 0; //a new property added to the to each assignment
-   ag.totalPoints += ag.assignments[i-1].points_possible;
+    ag.assignments[i - 1].assignmentWeight = 0; //a new property added to the to each assignment
+    ag.totalPoints += ag.assignments[i - 1].points_possible;
   }
 
   //? Which learner are we talking about
   let studentIDs = getLearnerIds(getData, submissions);
   let students = []; //array of the students //![{},...]
 
-  for (let id of studentIDs) { // All the students in the course
+  for (let id of studentIDs) {
+    // All the students in the course
     let submittedAssignments = getSubmissionForStudent(id, submissions, ag);
 
     let weightedAvg = 0;
-    submittedAssignments.forEach(assignment => weightedAvg += CalculateAverage(assignment.grade, assignment.assignmentWeight));
+    submittedAssignments.forEach(
+      (assignment) =>
+        (weightedAvg += CalculateAverage(
+          assignment.grade,
+          assignment.assignmentWeight
+        ))
+    );
     Math.floor(weightedAvg);
     let student = new Student(id, weightedAvg, [], submittedAssignments);
     Object.freeze(student);
     students.push(student);
   }
-  console.log(students);
 
-// console.log(students);
-//console.log(students[0].submittedAssignments);
+  //return an object from a selected format
+  return FormatStudentsData(students, []);
 }
 
 const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
+console.dir(result, { depth: null });
+
+
+function FormatStudentsData(students, result) {
+  students.forEach((student) => {
+    let a = student.submittedAssignments.map((assign) => ({ [assign.id]: assign.grade }));
+
+    const formattedData = {
+      id: student.id,
+      avg: student.weightedAvg,
+      assignment: a,
+    };
+    result.push(formattedData);
+  });
+  return result;
+}
 
 /**
  * Student Constructor
@@ -188,21 +210,19 @@ function getSubmissionForStudent(id, submissions, ag) {
   ); //* Returning an array that only has submitted assignments of one student
   let result = [];
   //* loop through learner submissions for one student and find the submission that matches the assignment group id
-  for (let sub of submissionsByLearner) { 
-    
-    let assignmentDetails = coursework.find(function(assignment) { //! what do I do if I have a submitted assignment but the assignmet was removed from the array try catch
-      if(assignment.id === sub.assignment_id){
-       return true;
-      } else
-        return false;
+  for (let sub of submissionsByLearner) {
+    let assignmentDetails = coursework.find(function (assignment) {
+      //! what do I do if I have a submitted assignment but the assignmet was removed from the array try catch
+      if (assignment.id === sub.assignment_id) {
+        return true;
+      } else return false;
     });
-  //  console.log(typeof(assignmentDetails));
-    if(assignmentDetails == undefined)
-      continue;
+    //  console.log(typeof(assignmentDetails));
+    if (assignmentDetails == undefined) continue;
 
     let obj = {};
     Object.assign(obj, assignmentDetails, sub.submission);
-    gradeAssignment(obj,ag.totalPoints,id);
+    gradeAssignment(obj, ag.totalPoints, id);
     Object.freeze(obj); //*obj is not unmutable;
     result.push(obj);
   }
@@ -222,67 +242,71 @@ function CreateSemesterBlock(ag) {
 
 /**
  * Goal: Is the due date valid?
- * @param {array} semesterBlock 
- * @param {string} due_date - 
+ * @param {array} semesterBlock
+ * @param {string} due_date -
  * @returns bool true or false
  */
 function IsWithinSemester(semesterBlock, due_date) {
-  try{
+  try {
     //!Try catch here with invalid date
-     valid_date = new Date(due_date);
-     if(isNaN(valid_date.getTime())) //! Make this work
+    valid_date = new Date(due_date);
+    if (isNaN(valid_date.getTime()))
+      //! Make this work
       throw new Error("The course due date is invalid");
 
-     return semesterBlock[0] <= valid_date &&
-     valid_date <= semesterBlock[1]
-     ? true // Dont need this
-     : false;     
-  }
-  catch(error)
-  {
-      console.log(error)
-      return false;
+    return semesterBlock[0] <= valid_date && valid_date <= semesterBlock[1]
+      ? true // Dont need this
+      : false;
+  } catch (error) {
+    console.log(error);
+    return false;
   }
 }
 
 //!-----------Calculations-----------------//
 //grade assignment
 /** /
- * @param {Object} n - the first assignment of the student 
+ * @param {Object} n - the first assignment of the student
  * @param {Number} courseTotal  - The total points of the course
- * @returns 
+ * @returns
  */
-function gradeAssignment(n, courseTotal,id){
+function gradeAssignment(n, courseTotal, id) {
   //! possible points cannot equal 0
   let percentageReduction = 0;
   let validDivision = true;
 
   try {
-    validDivision = n.points_possible !== 0
-    if(!validDivision)
-      throw new Error(`The total points for the assignment: ${n.name}, cannot be 0.`);
-    
-    if(new Date(n.submitted_at) > new Date(n.due_at)){
-      percentageReduction = (n.score * 0.1);
-      throw new Error (`The assignement: ${n.name} is past due for student: ${id}, deducting 10% from grade ${n.score/n.points_possible}`);
-    }
+    validDivision = n.points_possible !== 0;
+    if (!validDivision)
+      throw new Error(
+        `The total points for the assignment: ${n.name}, cannot be 0.`
+      );
 
+    if (new Date(n.submitted_at) > new Date(n.due_at)) {
+      percentageReduction = n.score * 0.1;
+      throw new Error(
+        `The assignement: ${
+          n.name
+        } is past due for student: ${id}, deducting 10% from grade ${
+          n.score / n.points_possible
+        }`
+      );
+    }
   } catch (error) {
-    if(validDivision === false){
-      n.points_possible = NaN; 
+    if (validDivision === false) {
+      n.points_possible = NaN;
       error.message += ` Assigning points_possible to NaN`;
       console.error(error.message);
       return; // exit the loop early while still printing the result
     }
     console.error(error.message);
   } finally {
-    n.grade = (n.score - percentageReduction)/ n.points_possible;
-    n.assignmentWeight = (n.points_possible/courseTotal);
+    n.grade = (n.score - percentageReduction) / n.points_possible;
+    n.assignmentWeight = n.points_possible / courseTotal;
   }
 }
 
-
-//calulate aveage 
-function CalculateAverage(grade, weight){
+//calulate aveage
+function CalculateAverage(grade, weight) {
   return grade * weight;
 }
