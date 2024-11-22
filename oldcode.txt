@@ -1,0 +1,35 @@
+//     //Calculate the weighted average for each student
+//   for(let submission of submissions){
+//     let id = 125;//!hard coded
+//     if(submission.learner_id == id)
+//     {
+//       let assignment = {
+//         learner_id: id,
+//         assignment_id: submission.assignment_id,
+//         weighted_grade: 0        
+//       }
+//       Object.assign(assignment, submission.submission); //copies properties from one object to another in this case we get the LearnerSubmission submission object(the internal object)
+//       studentScores.push(assignment);
+//     }
+//   }
+
+//   console.log(studentScores); //multidimensional array [{}]  SubmittedAssignments based on learner
+//   //?Can we put into a function
+//   for(let i = 0, assign = ag.assignments; i < studentScores.length; i++){
+//     totalPossiblePoints = 700 //!hard coded can we pass the total 
+//     studentScores.forEach((assignment) => {
+//        if(assignment.assignment_id == assign[i].id){
+//         let simpleAvg =  assignment.score / assign[i].points_possible; // grades with no weigth
+//         let weight = assign[i].points_possible / totalPossiblePoints; // weight an assignment holds
+//         assignment.weighted_grade = Math.trunc((simpleAvg * weight)*100); // the individual grade (weigthed) as a whole number
+//         //The Math.trunc() static method returns the integer part of a number by removing any fractional digits. //!rounds down
+//       }
+//     })
+// }
+
+  
+// weightedavg = studentScores.reduce(function(sum, element){ //method returns a single value: the function's accumulated result based on the equation below
+//   return sum + element.weighted_grade;
+// },0);
+// console.log(weightedavg); 
+
