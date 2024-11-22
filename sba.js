@@ -86,6 +86,7 @@ const LearnerSubmissions = [
 
 function getLearnerData(course, ag, submissions) {
   let getData = [];
+  //! Make copies of the code to segment it
   const result = [
       // {
       //   id: 125,
@@ -100,40 +101,41 @@ function getLearnerData(course, ag, submissions) {
       //   2: 0.833 // late: (140 - 15) / 150
       // }
   ];
+  //Adding to the ag object
   ag.semester = CreateSemesterBlock(ag);
   ag.falseAssignments = []; //! For assignments that don't fit in with semester timeframe add to a different array
   ag.totalPoints = 0; 
+
   // Because we are going to be modifying the original array with splice we can count backwards to avoid index shifting.
   for (let i = ag.assignments.length; i > 0;  i--) {
     IsWithinSemester(ag.semester, ag.assignments[i - 1].due_at);
-    // console.log(`Is ${ag.assignments[i].due_at} within the semester ${IsWithinSemester(ag.semester, ag.assignments[i].due_at)!= true}`)
     if(!IsWithinSemester(ag.semester, ag.assignments[i - 1].due_at)){
       let deprecatedObj = ag.assignments.splice(i-1, 1);
       ag.falseAssignments.push(deprecatedObj);
       continue;
     }
+   ag.assignments[i-1].assignmentWeight = 0; //a new property added to the to each assignment
    ag.totalPoints += ag.assignments[i-1].points_possible;
   }
 
   //? Which learner are we talking about
   let studentIDs = getLearnerIds(getData, submissions);
- // console.log(studentIDs);
-  let students = []; //array of the students class
+  let students = []; //array of the students //![{},...]
 
   for (let id of studentIDs) { // All the students in the course
     let submittedAssignments = getSubmissionForStudent(id, submissions, ag);
-    let student = new Student(id, 0, 0, [], submittedAssignments);
 
-    // console.log(submittedAssignments);
-    // console.log(`found all of student: ${id} comepleted assignments`);
-    // let assignment = {};
-    // Object.assign(assignment, submittedAssignments.submission);
-    // Object.assign(assignment, ag.submission); //copies properties from one object to another in this case we get the LearnerSubmission submission object(the internal object)
-    //studentScores.push(assignment);
+    let weightedAvg = 0;
+    submittedAssignments.forEach(assignment => weightedAvg += CalculateAverage(assignment.grade, assignment.assignmentWeight));
+    Math.floor(weightedAvg);
+    let student = new Student(id, weightedAvg, [], submittedAssignments);
+    Object.freeze(student);
     students.push(student);
   }
- console.log(students);
-  //console.log(students[0].submittedAssignments);
+  console.log(students);
+
+// console.log(students);
+//console.log(students[0].submittedAssignments);
 }
 
 const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
@@ -146,9 +148,8 @@ const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
  * @param {array} courses
  * @param {array} gradableAssignments
  */
-function Student(id, simpleAvg, weightedAvg, courses, gradableAssignments) {
+function Student(id, weightedAvg, courses, gradableAssignments) {
   (this.id = id),
-    (this.simpleAvg = simpleAvg),
     (this.weightedAvg = weightedAvg),
     (this.courses = courses),
     (this.submittedAssignments = gradableAssignments);
@@ -169,48 +170,45 @@ function getLearnerIds(result, learnerSubmissions) {
 /**
  *
  * @param {array} submissions - Total submissions by the student
- * @param {array} assignmentGroup - all the assignments for the course
+ * @param {array} ag - all the assignments for the course
  * @param {integer} id - Student Id
  * @returns [{},...] That represents the all student's submitted assignments
  */
-function getSubmissionForStudent(id, submissions, assignmentGroup) {
-  assignmentGroup.assignments.sort(function (a, b) {
+function getSubmissionForStudent(id, submissions, ag) {
+  ag.assignments.sort(function (a, b) {
     if (a.id < b.id)
       return -1; //A negative value indicates that a should come before b.
     else if (a.id > b.id) return 1; //A positive value indicates that a should come after b.
     return 0; //Zero or NaN indicates that a and b are considered equal -> stay the same
   });
 
-
-
-
-  let coursework = assignmentGroup.assignments; //* Assign let to an array that was sorted
-  let submissionByLearner = submissions.filter(
+  let coursework = ag.assignments; //* Assign let to an array that was sorted
+  let submissionsByLearner = submissions.filter(
     (submission) => submission.learner_id == id
   ); //* Returning an array that only has submitted assignments of one student
   let result = [];
   //* loop through learner submissions for one student and find the submission that matches the assignment group id
-  for (let sub of submissionByLearner) { 
-    let assignmentDetails = coursework.find(function(assignment) {
+  for (let sub of submissionsByLearner) { 
+    
+    let assignmentDetails = coursework.find(function(assignment) { //! what do I do if I have a submitted assignment but the assignmet was removed from the array try catch
       if(assignment.id === sub.assignment_id){
-        return true;
-      }
+       return true;
+      } else
+        return false;
     });
-
-    
-    let obj = {};
-    if (assignmentDetails === undefined)
-      // Somehow the learner submitted a assignmet that was not due yet.
+  //  console.log(typeof(assignmentDetails));
+    if(assignmentDetails == undefined)
       continue;
-    //*Find the assignment where it's id matches the id of the student's submission 
-    
+
+    let obj = {};
     Object.assign(obj, assignmentDetails, sub.submission);
+    gradeAssignment(obj,ag.totalPoints,id);
+    Object.freeze(obj); //*obj is not unmutable;
     result.push(obj);
   }
+  //console.log(result);
   return result;
 }
-
-function CalculateCumulativePoints(...points) {}
 
 /**
  * @returns //An array that include the start and end of the the semester
@@ -245,4 +243,46 @@ function IsWithinSemester(semesterBlock, due_date) {
       console.log(error)
       return false;
   }
+}
+
+//!-----------Calculations-----------------//
+//grade assignment
+/** /
+ * @param {Object} n - the first assignment of the student 
+ * @param {Number} courseTotal  - The total points of the course
+ * @returns 
+ */
+function gradeAssignment(n, courseTotal,id){
+  //! possible points cannot equal 0
+  let percentageReduction = 0;
+  let validDivision = true;
+
+  try {
+    validDivision = n.points_possible !== 0
+    if(!validDivision)
+      throw new Error(`The total points for the assignment: ${n.name}, cannot be 0.`);
+    
+    if(new Date(n.submitted_at) > new Date(n.due_at)){
+      percentageReduction = (n.score * 0.1);
+      throw new Error (`The assignement: ${n.name} is past due for student: ${id}, deducting 10% from grade ${n.score/n.points_possible}`);
+    }
+
+  } catch (error) {
+    if(validDivision === false){
+      n.points_possible = NaN; 
+      error.message += ` Assigning points_possible to NaN`;
+      console.error(error.message);
+      return; // exit the loop early while still printing the result
+    }
+    console.error(error.message);
+  } finally {
+    n.grade = (n.score - percentageReduction)/ n.points_possible;
+    n.assignmentWeight = (n.points_possible/courseTotal);
+  }
+}
+
+
+//calulate aveage 
+function CalculateAverage(grade, weight){
+  return grade * weight;
 }
