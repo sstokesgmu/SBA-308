@@ -87,18 +87,18 @@ const LearnerSubmissions = [
 function getLearnerData(course, ag, submissions) {
   let getData = [];
   const result = [
-      {
-        id: 125,
-        avg: 0.985, // (47 + 150) / (50 + 150)
-        1: 0.94, // 47 / 50
-        2: 1.0 // 150 / 150
-      },
-      {
-        id: 132,
-        avg: 0.82, // (39 + 125) / (50 + 150)
-        1: 0.78, // 39 / 50
-        2: 0.833 // late: (140 - 15) / 150
-      }
+      // {
+      //   id: 125,
+      //   avg: 0.985, // (47 + 150) / (50 + 150)
+      //   1: 0.94, // 47 / 50
+      //   2: 1.0 // 150 / 150
+      // },
+      // {
+      //   id: 132,
+      //   avg: 0.82, // (39 + 125) / (50 + 150)
+      //   1: 0.78, // 39 / 50
+      //   2: 0.833 // late: (140 - 15) / 150
+      // }
   ];
   ag.semester = CreateSemesterBlock(ag);
   ag.falseAssignments = []; //! For assignments that don't fit in with semester timeframe add to a different array
@@ -132,7 +132,7 @@ function getLearnerData(course, ag, submissions) {
     //studentScores.push(assignment);
     students.push(student);
   }
- //console.log(students);
+ console.log(students);
   //console.log(students[0].submittedAssignments);
 }
 
@@ -144,14 +144,14 @@ const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
  * @param {float} simpleAvg
  * @param {float} weightedAvg
  * @param {array} courses
- * @param {array} submittedAssignments
+ * @param {array} gradableAssignments
  */
-function Student(id, simpleAvg, weightedAvg, courses, submittedAssignments) {
+function Student(id, simpleAvg, weightedAvg, courses, gradableAssignments) {
   (this.id = id),
     (this.simpleAvg = simpleAvg),
     (this.weightedAvg = weightedAvg),
     (this.courses = courses),
-    (this.submittedAssignments = submittedAssignments);
+    (this.submittedAssignments = gradableAssignments);
 }
 /**
  * getLearnerIds
@@ -189,15 +189,18 @@ function getSubmissionForStudent(id, submissions, assignmentGroup) {
     (submission) => submission.learner_id == id
   ); //* Returning an array that only has submitted assignments of one student
   let result = [];
-  //* loop through learner submissions compare 
+  //* loop through learner submissions for one student and find the submission that matches the assignment group id
   for (let sub of submissionByLearner) { 
-    let assignmentDetails = coursework.find((assignment) => assignment.id === sub.assignment_id);
-    console.log(assignmentDetails);
+    let assignmentDetails = coursework.find(function(assignment) {
+      if(assignment.id === sub.assignment_id){
+        return true;
+      }
+    });
 
     
     let obj = {};
     if (assignmentDetails === undefined)
-      // Somehow the learner submitted a assignment that was not in the coursework
+      // Somehow the learner submitted a assignmet that was not due yet.
       continue;
     //*Find the assignment where it's id matches the id of the student's submission 
     
@@ -229,12 +232,12 @@ function IsWithinSemester(semesterBlock, due_date) {
   try{
     //!Try catch here with invalid date
      valid_date = new Date(due_date);
-     if(isNaN(valid_date.getTime()))
+     if(isNaN(valid_date.getTime())) //! Make this work
       throw new Error("The course due date is invalid");
 
      return semesterBlock[0] <= valid_date &&
      valid_date <= semesterBlock[1]
-     ? true
+     ? true // Dont need this
      : false;     
   }
   catch(error)
