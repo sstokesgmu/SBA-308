@@ -86,81 +86,69 @@ const LearnerSubmissions = [
 
 function getLearnerData(course, ag, submissions) {
   let getData = [];
-  //! Make copies of the code to segment it
-  const result = [
-    // {
-    //   id: 125,
-    //   avg: 0.985, // (47 + 150) / (50 + 150)
-    //   1: 0.94, // 47 / 50
-    //   2: 1.0 // 150 / 150
-    // },
-    // {
-    //   id: 132,
-    //   avg: 0.82, // (39 + 125) / (50 + 150)
-    //   1: 0.78, // 39 / 50
-    //   2: 0.833 // late: (140 - 15) / 150
-    // }
-  ];
   //Adding to the ag object
+
   ag.semester = CreateSemesterBlock(ag);
   ag.falseAssignments = []; //! For assignments that don't fit in with semester timeframe add to a different array
   ag.totalPoints = 0;
+  result = [];
+//   // Because we are going to be modifying the original array with splice we can count backwards to avoid index shifting.
+//   for (let i = ag.assignments.length; i > 0; i--) {
+//     IsWithinSemester(ag.semester, ag.assignments[i - 1].due_at);
+//     if (!IsWithinSemester(ag.semester, ag.assignments[i - 1].due_at)) {
+//       let deprecatedObj = ag.assignments.splice(i - 1, 1);
+//       ag.falseAssignments.push(deprecatedObj);
+//       continue;
+//     }
+//     ag.assignments[i - 1].assignmentWeight = 0; //a new property added to the to each assignment
+//     ag.totalPoints += ag.assignments[i - 1].points_possible;
+//   }
 
-  // Because we are going to be modifying the original array with splice we can count backwards to avoid index shifting.
-  for (let i = ag.assignments.length; i > 0; i--) {
-    IsWithinSemester(ag.semester, ag.assignments[i - 1].due_at);
-    if (!IsWithinSemester(ag.semester, ag.assignments[i - 1].due_at)) {
-      let deprecatedObj = ag.assignments.splice(i - 1, 1);
-      ag.falseAssignments.push(deprecatedObj);
-      continue;
-    }
-    ag.assignments[i - 1].assignmentWeight = 0; //a new property added to the to each assignment
-    ag.totalPoints += ag.assignments[i - 1].points_possible;
-  }
+//   //? Which learner are we talking about
+//   let studentIDs = getLearnerIds(getData, submissions);
+//   let students = []; //array of the students //![{},...]
 
-  //? Which learner are we talking about
-  let studentIDs = getLearnerIds(getData, submissions);
-  let students = []; //array of the students //![{},...]
+//   for (let id of studentIDs) {
+//     // All the students in the course
+//     let submittedAssignments = getSubmissionForStudent(id, submissions, ag);
 
-  for (let id of studentIDs) {
-    // All the students in the course
-    let submittedAssignments = getSubmissionForStudent(id, submissions, ag);
+//     let weightedAvg = 0;
+//     submittedAssignments.forEach(
+//       (assignment) =>
+//         (weightedAvg += CalculateAverage(
+//           assignment.grade,
+//           assignment.assignmentWeight
+//         ))
+//     );
+//     Math.floor(weightedAvg);
+//     let student = new Student(id, weightedAvg, [], submittedAssignments);
+//     Object.freeze(student);
+//     students.push(student);
+//   }
 
-    let weightedAvg = 0;
-    submittedAssignments.forEach(
-      (assignment) =>
-        (weightedAvg += CalculateAverage(
-          assignment.grade,
-          assignment.assignmentWeight
-        ))
-    );
-    Math.floor(weightedAvg);
-    let student = new Student(id, weightedAvg, [], submittedAssignments);
-    Object.freeze(student);
-    students.push(student);
-  }
+//   //return an object from a selected format
+//   return FormatStudentsData(students, []);
+// }
 
-  //return an object from a selected format
-  return FormatStudentsData(students, []);
-}
-
-const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
-console.dir(result, { depth: null });
+// const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
+// console.dir(result, { depth: null });
 
 
-function FormatStudentsData(students, result) {
-  students.forEach((student) => {
-    let a = student.submittedAssignments.map((assign) => ({ [assign.id]: assign.grade }));
+// function FormatStudentsData(students, result) {
+//   students.forEach((student) => {
+//     let a = student.submittedAssignments.map((assign) => ({ [assign.id]: assign.grade }));
 
-    const formattedData = {
-      id: student.id,
-      avg: student.weightedAvg,
-      assignment: a,
-    };
-    result.push(formattedData);
-  });
+//     const formattedData = {
+//       id: student.id,
+//       avg: student.weightedAvg,
+//       assignment: a,
+//     };
+//     result.push(formattedData);
+//   });
   return result;
 }
+
+getLearnerData(CourseInfo, AssignmentGroup,LearnerSubmissions);
 
 /**
  * Student Constructor
@@ -230,14 +218,21 @@ function getSubmissionForStudent(id, submissions, ag) {
   return result;
 }
 
+
+/*---------Date Handling---------*/
 /**
  * @returns //An array that include the start and end of the the semester
  */
 function CreateSemesterBlock(ag) {
-  const semesterStart = new Date(2023, 0, 15);
-  const semsterEnd = new Date(2023, 4, 27); //!Date cannot be less than the start
-  const semsterTimeFrame = [semesterStart, semsterEnd];
-  return semsterTimeFrame;
+  const semesterStart = new Date(2023, 0, 15); 
+  let semesterEnd = new Date(2022, 4, 27); 
+
+  //!Date if the semester end is somehow less then the start date the we will assign eight months
+  if(semesterEnd <= semesterStart)
+    semesterEnd = new Date(semesterStart.setMonth(semesterStart.getMonth() + 8));
+
+  const semesterTimeFrame = [semesterStart, semesterEnd];
+  return semesterTimeFrame;
 }
 
 /**
