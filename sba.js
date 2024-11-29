@@ -85,70 +85,74 @@ const LearnerSubmissions = [
 ];
 
 function getLearnerData(course, ag, submissions) {
-  let getData = [];
   //Adding to the ag object
 
-  ag.semester = CreateSemesterBlock(ag);
-  ag.falseAssignments = []; //! For assignments that don't fit in with semester timeframe add to a different array
-  ag.totalPoints = 0;
-  result = [];
-//   // Because we are going to be modifying the original array with splice we can count backwards to avoid index shifting.
-//   for (let i = ag.assignments.length; i > 0; i--) {
-//     IsWithinSemester(ag.semester, ag.assignments[i - 1].due_at);
-//     if (!IsWithinSemester(ag.semester, ag.assignments[i - 1].due_at)) {
-//       let deprecatedObj = ag.assignments.splice(i - 1, 1);
-//       ag.falseAssignments.push(deprecatedObj);
-//       continue;
-//     }
-//     ag.assignments[i - 1].assignmentWeight = 0; //a new property added to the to each assignment
-//     ag.totalPoints += ag.assignments[i - 1].points_possible;
-//   }
+  //! How do I check if an object properties is null
 
-//   //? Which learner are we talking about
-//   let studentIDs = getLearnerIds(getData, submissions);
-//   let students = []; //array of the students //![{},...]
+  /*
+    const obj = { prop1: "value", prop2: null };
 
-//   for (let id of studentIDs) {
-//     // All the students in the course
-//     let submittedAssignments = getSubmissionForStudent(id, submissions, ag);
+if (obj.prop2?.something === undefined) {
+  console.log("prop2 is null or undefined");
+}  
+  */ 
+  if (ag?.semester === undefined) {
+    ag.semester = CreateSemesterBlock(ag);
+    ag.falseAssignments = []; //! For assignments that don't fit in with semester timeframe add to a different array
+  }
+  if (ag?.totalPoints === undefined)
+    ag.totalPoints = 0; 
+  
+  FilterAssignments(ag);
+  
+ 
+  //* Find all the learners in the course
+  let studentIDs = getLearnerIds([], submissions);
+  let students = []; //array of the students //![{},...]
 
-//     let weightedAvg = 0;
-//     submittedAssignments.forEach(
-//       (assignment) =>
-//         (weightedAvg += CalculateAverage(
-//           assignment.grade,
-//           assignment.assignmentWeight
-//         ))
-//     );
-//     Math.floor(weightedAvg);
-//     let student = new Student(id, weightedAvg, [], submittedAssignments);
-//     Object.freeze(student);
-//     students.push(student);
-//   }
 
-//   //return an object from a selected format
-//   return FormatStudentsData(students, []);
-// }
+  for (let id of studentIDs) {
+    // All the students in the course
+    let submittedAssignments = GroupStudentAssignment(id, submissions, ag);
+    let weightedAvg = 0;
+    submittedAssignments.forEach(
+      (assignment) =>
+        (weightedAvg += CalculateAverage(
+          assignment.grade,
+          assignment.assignmentWeight
+        ))
+    );
+    Math.floor(weightedAvg);
+    let student = new Student(id, weightedAvg, [], submittedAssignments);
+    Object.freeze(student); //Can modify it
+    students.push(student);
+  }
+  //return an object from a selected format
+  return FormatStudentsData(students, []);
+}
+const result = getLearnerData(CourseInfo, AssignmentGroup,LearnerSubmissions);
+console.dir(result, {depth:null});
 
+/**
+ * 
+ * @param {array} students 
+ * @param {array} result  empty array
+
+ */
 // const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
 // console.dir(result, { depth: null });
-
-
-// function FormatStudentsData(students, result) {
-//   students.forEach((student) => {
-//     let a = student.submittedAssignments.map((assign) => ({ [assign.id]: assign.grade }));
-
-//     const formattedData = {
-//       id: student.id,
-//       avg: student.weightedAvg,
-//       assignment: a,
-//     };
-//     result.push(formattedData);
-//   });
+function FormatStudentsData(students, result) {
+  students.forEach((student) => {
+    let assignmentScores = student.submittedAssignments.map((assign) => ({ [assign.id]: assign.grade }));
+    const formattedData = {
+      id: student.id,
+      avg: student.weightedAvg,
+      assignments: assignmentScores,
+    };
+    result.push(formattedData);
+  });
   return result;
 }
-
-getLearnerData(CourseInfo, AssignmentGroup,LearnerSubmissions);
 
 /**
  * Student Constructor
@@ -184,22 +188,18 @@ function getLearnerIds(result, learnerSubmissions) {
  * @param {integer} id - Student Id
  * @returns [{},...] That represents the all student's submitted assignments
  */
-function getSubmissionForStudent(id, submissions, ag) {
-  ag.assignments.sort(function (a, b) {
-    if (a.id < b.id)
-      return -1; //A negative value indicates that a should come before b.
-    else if (a.id > b.id) return 1; //A positive value indicates that a should come after b.
-    return 0; //Zero or NaN indicates that a and b are considered equal -> stay the same
-  });
-
-  let coursework = ag.assignments; //* Assign let to an array that was sorted
-  let submissionsByLearner = submissions.filter(
-    (submission) => submission.learner_id == id
-  ); //* Returning an array that only has submitted assignments of one student
+function GroupStudentAssignment(id, submissions, ag) {
+ 
+  //* Assign let to an array that was sorted
+  let coursework = ag.assignments; 
+  //* Returning an array that only has submitted assignments of one student
+  let submissionsByLearner = submissions.filter((submission) =>
+     submission.learner_id == id); 
+  
   let result = [];
   //* loop through learner submissions for one student and find the submission that matches the assignment group id
   for (let sub of submissionsByLearner) {
-    let assignmentDetails = coursework.find(function (assignment) {
+    let assignmentDetails = coursework.find(function(assignment) {
       //! what do I do if I have a submitted assignment but the assignmet was removed from the array try catch
       if (assignment.id === sub.assignment_id) {
         return true;
@@ -219,18 +219,19 @@ function getSubmissionForStudent(id, submissions, ag) {
 }
 
 
-/*---------Date Handling---------*/
+/*---------Course Handling---------*/
 /**
- * @returns //An array that include the start and end of the the semester
+ * @returns {array}  that will include the start and end of the the semester
  */
 function CreateSemesterBlock(ag) {
   const semesterStart = new Date(2023, 0, 15); 
   let semesterEnd = new Date(2022, 4, 27); 
-
   //!Date if the semester end is somehow less then the start date the we will assign eight months
   if(semesterEnd <= semesterStart)
-    semesterEnd = new Date(semesterStart.setMonth(semesterStart.getMonth() + 8));
-
+    {
+      semesterEnd = new Date(semesterStart);
+      semesterEnd.setMonth(semesterEnd.getMonth() + 8);
+    }
   const semesterTimeFrame = [semesterStart, semesterEnd];
   return semesterTimeFrame;
 }
@@ -258,9 +259,43 @@ function IsWithinSemester(semesterBlock, due_date) {
   }
 }
 
+/**
+ * Goal: Modify the assingment goup 
+ * @param {object} ag = Assignment Group 
+ */
+function FilterAssignments(ag){
+   // Because we are going to be modifying the original array with splice we can count backwards to avoid index shifting.
+   let assignments = ag.assignments;
+   for (let i = assignments.length - 1; i >= 0; i--) { //! Could I use reduce right here
+     IsWithinSemester(ag.semester, assignments[i].due_at);
+     if (!IsWithinSemester(ag.semester, assignments[i].due_at)) {
+       let invalidAssignment = assignments.splice(i, 1);
+       ag.falseAssignments.push(invalidAssignment);
+       continue;
+     }
+     //null coalescing we check the left hand side (x ??) to see if the value is not null or
+     //undefined the we assign it. The right hand side is a fallback assignment if the left hand side 
+     //returns true
+    //  assignments[i].weight = assignments[i].weight ?? 0; 
+     ag.totalPoints += assignments[i].points_possible;
+   }
+   assignments = SortAssignments(ag.assignments);
+  
+}
+
+function SortAssignments(array){
+  array.sort(function (a, b) {
+    if (a.id < b.id)
+      return -1; //A negative value indicates that a should come before b.
+    else if (a.id > b.id) 
+      return 1; //A positive value indicates that a should come after b.
+    return 0; //Zero or NaN indicates that a and b are considered equal -> stay the same
+  });
+  return array;
+}
+
 //!-----------Calculations-----------------//
-//grade assignment
-/** /
+/** 
  * @param {Object} n - the first assignment of the student
  * @param {Number} courseTotal  - The total points of the course
  * @returns
