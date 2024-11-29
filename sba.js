@@ -85,17 +85,6 @@ const LearnerSubmissions = [
 ];
 
 function getLearnerData(course, ag, submissions) {
-  //Adding to the ag object
-
-  //! How do I check if an object properties is null
-
-  /*
-    const obj = { prop1: "value", prop2: null };
-
-if (obj.prop2?.something === undefined) {
-  console.log("prop2 is null or undefined");
-}  
-  */ 
   if (ag?.semester === undefined) {
     ag.semester = CreateSemesterBlock(ag);
     ag.falseAssignments = []; //! For assignments that don't fit in with semester timeframe add to a different array
