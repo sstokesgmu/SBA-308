@@ -119,12 +119,12 @@ function getLearnerData(course, ag, submissions) {
   }
 
   //? Which learner are we talking about
-  let studentIDs = getLearnerIds(getData, submissions);
+  let studentIDs = GetLearnerIds(getData, submissions);
   let students = []; //array of the students //![{},...]
 
   for (let id of studentIDs) {
     // All the students in the course
-    let submittedAssignments = getSubmissionForStudent(id, submissions, ag);
+    let submittedAssignments = GetSubmissionForStudent(id, submissions, ag);
 
     let weightedAvg = 0;
     submittedAssignments.forEach(
@@ -182,7 +182,7 @@ function Student(id, weightedAvg, courses, gradableAssignments) {
  * @param {Array} learnerSubmissions
  * @returns //Return the array of all the students in the course
  */
-function getLearnerIds(result, learnerSubmissions) {
+function GetLearnerIds(result, learnerSubmissions) {
   for (let submission of learnerSubmissions)
     if (!result.includes(submission.learner_id))
       //is the id is not in the array already? true add it
@@ -196,7 +196,7 @@ function getLearnerIds(result, learnerSubmissions) {
  * @param {integer} id - Student Id
  * @returns [{},...] That represents the all student's submitted assignments
  */
-function getSubmissionForStudent(id, submissions, ag) {
+function GetSubmissionForStudent(id, submissions, ag) {
   ag.assignments.sort(function (a, b) {
     if (a.id < b.id)
       return -1; //A negative value indicates that a should come before b.
@@ -222,7 +222,7 @@ function getSubmissionForStudent(id, submissions, ag) {
 
     let obj = {};
     Object.assign(obj, assignmentDetails, sub.submission);
-    gradeAssignment(obj, ag.totalPoints, id);
+    GradeAssignment(obj, ag.totalPoints, id);
     Object.freeze(obj); //*obj is not unmutable;
     result.push(obj);
   }
@@ -270,7 +270,7 @@ function IsWithinSemester(semesterBlock, due_date) {
  * @param {Number} courseTotal  - The total points of the course
  * @returns
  */
-function gradeAssignment(n, courseTotal, id) {
+function GradeAssignment(n, courseTotal, id) {
   //! possible points cannot equal 0
   let percentageReduction = 0;
   let validDivision = true;
