@@ -96,7 +96,7 @@ function getLearnerData(course, ag, submissions) {
   
  
   //* Find all the learners in the course
-  let studentIDs = getLearnerIds([], submissions);
+  let studentIDs = GetLearnerIds([], submissions);
   let students = []; //array of the students //![{},...]
 
 
